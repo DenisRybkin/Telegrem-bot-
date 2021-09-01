@@ -1,0 +1,1 @@
+Telegram bot that can turn off the computer by voice messages and menu buttons
