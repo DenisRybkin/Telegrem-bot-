@@ -1,12 +1,14 @@
+require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
+const keybord = require('./keyboards');
 var exec = require('child_process').exec;
-const { exit } =  require('process');
+const {exit} = require('process');
+const process = require("process");
 
-const token = '1948505395:AAFVQ1EaHy8FeEggsX-aphXCIaIUE3PGN1w';
-const YA_API_KEY = 'AQVNzdbALO0k749vmkj7UJV89nSr4OUeEIiunQRU';
+let isNewSessionPC = true;
 
-const bot = new TelegramBot(token, {polling: true});
+const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, {polling: true});
 
 process.on('exit', (code) => {
     console.log(`About to exit with code: ${code}`);
@@ -18,93 +20,49 @@ bot.onText(/\/echo (.+)/, (msg, match) => {
     bot.sendMessage(chatId, resp);
 });
 
+bot.on('callback_query', (query) => {
+    const chatId = query.from.id;
+    bot.sendMessage(chatId, `окей, запускаю ${query.data} 👀`);
+    switch (query.data) {
+        case 'shutdown' :
+            exec('shutdown.exe -s -t 10', function () {
+                console.log('shutdown.exe -s -t 10');
+                exit(-1);
+            });
+            break;
+        case 'reboot' :
+            exec('shutdown.exe -r -t 10', function () {
+                console.log('shutdown.exe -r -t 10');
+                exit(-1);
+            });
+            break;
+        case 'sleepMode' :
+            exec('rundll32 powrprof.dll,SetSuspendState', function () {
+                console.log('rundll32 powrprof.dll,SetSuspendState')
+            });
+            break;
+    }
+});
 
-bot.on('message', (msg) => {
+bot.on('message', async (msg) => {
     const messageID = msg.message_id;
     const chatId = msg.chat.id;
-    if(msg.chat.username === 'calmfish'){
-        if(msg.text){
-            if((msg.text.toLowerCase() === 'пк' ||
-                msg.text.toLowerCase() === 'открыть меню возможностей 💁🏻') && msg.message_id === messageID){
-                msg.text = 'pusto';
-                bot.sendMessage(chatId , 'Что ты хочешь сделать с ПК ?', {
-                    reply_markup :{
-                        inline_keyboard : [
-                            [
-                                {
-                                    text: 'Выключить 🙆🏻',
-                                    callback_data : 'shutdown',
-                                }
-                            ],
-                            [
-                                {
-                                    text : 'Перезагрузить 👀',
-                                    callback_data : 'reboot',
-                                }
-                            ],
-                            [
-                                {
-                                    text: 'Спящий режим 💆🏻',
-                                    callback_data: 'sleepMode',
-                                }
-                            ],
-                            [
-                                {
-                                    text: 'Отмена! 🙅🏻',
-                                    callback_data: 'cancel',
-                                }
-                            ]
-                        ],
-                    }
-                });
+    if(isNewSessionPC){
+        isNewSessionPC = false;
+        await bot.sendSticker(chatId,'https://tlgrm.ru/_/stickers/629/439/62943973-f1e5-422a-91ff-0436fd9c9722/33.webp');
+    }
+    if (msg.chat.username === 'calmfish') {
+        if (msg.text) {
+            if ((msg.text.toLowerCase() === 'пк' ||
+                msg.text.toLowerCase() === 'открыть меню возможностей 💁🏻') && msg.message_id === messageID) {
+                await bot.sendMessage(chatId, 'Что ты хочешь сделать с ПК ?', keybord.pcMenu);
             }
-            if(msg.text === 'pusto'){
-                return;
-            }
-            if((msg.text !== 'Открыть меню возможностей 💁🏻' && msg.text !== 'Закрыть клавиатуру 🤓')) {
+            if ((msg.text !== 'Открыть меню возможностей 💁🏻' && msg.text !== 'Закрыть клавиатуру 🤓')) {
                 bot.sendMessage(chatId, 'Я тебя услышал, но чет не получилось распознать че ты' +
                     ' хочешь 🤨 😑, поэтому отрою клавиатуру');
-                bot.sendMessage(chatId, 'Открываю клавиатуру', {
-                    reply_markup : {
-                        keyboard : [
-                            [
-                                {text : 'Закрыть клавиатуру 🤓',},
-                                {
-                                    text: 'Открыть меню возможностей 💁🏻',
-                                    callback_data: 'openMenu',
-                                }
-                            ]
-                        ],
-                        one_time_keyboard : true,
-                    }
-                })
+                bot.sendMessage(chatId, 'Открываю клавиатуру', keybord.mainMenuOptions)
             }
-            bot.on('callback_query', (query) => {
-                const chatId = query.from.id;
-                bot.sendMessage(chatId, `окей, запускаю ${query.data} 👀`);
-                if(query.data === 'shutdown'){
-                    exec('shutdown.exe -s -t 10', function(error, stdout, stderr) {
-                        console.log('shutdown.exe -s -t 10');
-                        exit(-1);
-                    });
-                }
-                if(query.data === 'reboot'){
-                    exec('shutdown.exe -r -t 10', function(error, stdout, stderr) {
-                        console.log('shutdown.exe -r -t 10');
-                        exit(-1);
-                    });
-                }
-                if(query.data === 'sleepMode'){
-                    exec('rundll32 powrprof.dll,SetSuspendState', function(error, stdout, stderr) {
-                        console.log('rundll32 powrprof.dll,SetSuspendState')
-                    });
-                }
-                if(query.data === 'cancel'){
-                    bot.deleteMessage(chatId, query.message.message_id);
-                    bot.sendMessage(query.from.id, 'Отмена произведена! 🤷🏻');
-                }
-            });
-        }else {
+        } else {
             const stream = bot.getFileStream(msg.voice.file_id);
             let chunks = [];
             stream.on('data', chunk => chunks.push(chunk));
@@ -112,36 +70,42 @@ bot.on('message', (msg) => {
                 const axiosConfig = {
                     method: 'POST',
                     url: 'https://stt.api.cloud.yandex.net/speech/v1/stt:recognize',
-                    headers : {
-                        Authorization : 'Api-key ' + YA_API_KEY,
+                    headers: {
+                        Authorization: 'Api-key ' + process.env.YA_API_KEY,
                     },
-                    data : Buffer.concat(chunks),
+                    data: Buffer.concat(chunks),
                 };
-                axios(axiosConfig).then(response => {
-                    const command =  response.data.result;
+                axios(axiosConfig).then(async response => {
+                    const command = response.data.result;
                     const chatId = msg.chat.id;
-                    if(command.toLowerCase() === 'выключи компьютер'){
-                        bot.sendMessage(chatId, 'Выключаю компьютер!');
-                           exec('shutdown.exe -s -t 00', function(error, stdout, stderr) {
-                            console.log('shutdown.exe -s -t 00');
-                            exit(-1);
-                        });
-                    }
-                    if(command.toLowerCase() === 'перезагрузи компьютер!'){
-                        bot.sendMessage(chatId, 'перезагружаю компьютер');
-                        exec('shutdown.exe -r -t 10', function(error, stdout, stderr) {
-                            console.log('shutdown.exe -s -t 00');
-                            exit(-1);
-                        });
-                    }
-                    if(command.toLowerCase() === 'перейди в спящий режим'){
-                        bot.sendMessage(chatId, 'Перевожу в спящий режим!');
-                        exec('rundll32 powrprof.dll,SetSuspendState', function(error, stdout, stderr) {
-                            console.log('shutdown.exe -s -t 00')
-                        });
-                    }
-                    else {
-                        bot.sendMessage(chatId, 'Не понял че ты хочешь???!');
+                    switch (command.toLowerCase()) {
+                        case 'выключи компьютер' :
+                            await bot.sendMessage(chatId, 'Выключаю компьютер!');
+                            await bot.sendSticker(chatId, 'https://tlgrm.ru/_/stickers/629/439/62943973-f1e5-422a-91ff-0436fd9c9722/19.webp');
+                            exec('shutdown.exe -s -t 00', function () {
+                                console.log('shutdown.exe -s -t 00');
+                                exit(-1);
+                            });
+                            break;
+                        case 'перезагрузи компьютер!' :
+                            await bot.sendMessage(chatId, 'перезагружаю компьютер');
+                            await bot.sendSticker(chatId, 'https://tlgrm.ru/_/stickers/629/439/62943973-f1e5-422a-91ff-0436fd9c9722/8.webp');
+                            exec('shutdown.exe -r -t 10', function () {
+                                console.log('shutdown.exe -s -t 00');
+                                exit(-1);
+                            });
+                            break;
+                        case 'перейди в спящий режим' :
+                            await bot.sendMessage(chatId, 'Перевожу в спящий режим!');
+                            await bot.sendSticker(chatId, 'https://tlgrm.ru/_/stickers/629/439/62943973-f1e5-422a-91ff-0436fd9c9722/21.webp')
+                            exec('rundll32 powrprof.dll,SetSuspendState', function () {
+                                console.log('shutdown.exe -s -t 00')
+                            });
+                            break;
+                        default :
+                            await bot.sendMessage(chatId, 'Не понял');
+                            await bot.sendSticker(chatId, 'https://tlgrm.ru/_/stickers/629/439/62943973-f1e5-422a-91ff-0436fd9c9722/20.webp')
+                            break;
                     }
                 }).catch((err) => {
                     console.log("Произошла ошибка при попытка распознавания речи! :", err.response);
@@ -149,8 +113,9 @@ bot.on('message', (msg) => {
             });
         }
     } else {
-        bot.sendMessage(chatId, 'Вы не мой хозяин и не можете мной управлять🤬');
+        await bot.sendMessage(chatId, `Мой хозяин Денис Рыбкин, а ${msg.from.first_name} ${msg.from.last_name} не будет мной управлять🤬`);
+        await bot.sendSticker(chatId, 'https://tlgrm.ru/_/stickers/629/439/62943973-f1e5-422a-91ff-0436fd9c9722/27.webp');
+        await bot.sendSticker(chatId, 'https://tlgrm.ru/_/stickers/fab/e9f/fabe9f3a-d6ad-4d45-8e0d-478f9278d228/3.webp');
     }
-
 });
-bot.on("polling_error", console.log)
+bot.on("polling_error", console.log);
