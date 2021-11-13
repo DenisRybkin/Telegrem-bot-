@@ -1,1 +1,1 @@
-Telegram bot that can turn off the computer by voice messages and menu buttons
+Telegram bot, which can turn off the computer using voice messages and menu buttons. In addition, there is a managed list of managing thought

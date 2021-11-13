@@ -1,0 +1,16 @@
+const { initializeApp } = require("firebase/app");
+const { getFirestore } = require("firebase/firestore");
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCs-E8-DbaXcUgCfzjYuH8DWiu05MYnij8",
+    authDomain: "t-bot-92db1.firebaseapp.com",
+    projectId: "t-bot-92db1",
+    storageBucket: "t-bot-92db1.appspot.com",
+    messagingSenderId: "336066287358",
+    appId: "1:336066287358:web:d5e62fc09ca9c59d6ef7af",
+    measurementId: "G-M7303N4HW3"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore();
+module.exports = db;

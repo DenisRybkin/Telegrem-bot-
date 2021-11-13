@@ -1,14 +1,56 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
-const axios = require('axios');
-const keybord = require('./keyboards');
-var exec = require('child_process').exec;
-const {exit} = require('process');
+const saveMind = require("./firebase/addMind");
+const deleting = require("./firebase/deleteMind");
 const process = require("process");
-
-let isNewSessionPC = true;
+const keyboard = require('./keyboards');
+const voiceRecognition = require('./voiceRecognition');
+const reducerOfBtns = require('./reducerOfBtns');
 
 const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, {polling: true});
+
+let isNewSessionPC = true;
+let mindIsWritten = false;
+function setMindIsTyping (value) {
+    mindIsWritten = value;
+}
+let numberMindIsWritten = false;
+function setNumberMindIsTyping (value) {
+    numberMindIsWritten = value;
+}
+
+const switcher = async (msg, chatId) => {
+    if(mindIsWritten){
+        if(msg.text.toLowerCase() === 'отмена'){
+            mindIsWritten = false;
+            await bot.sendMessage(chatId, 'Вы отменили добавление мысли в блокнот!');
+        } else {
+            const result = await saveMind(msg.text);
+            mindIsWritten = false;
+            await bot.sendMessage(chatId, result);
+        }
+    } else {
+        if ((msg.text.toLowerCase() === 'пк' ||
+            msg.text.toLowerCase() === 'открыть меню возможностей 💁🏻')) {
+            await bot.sendMessage(chatId, 'Что ты хочешь сделать с ПК ?', keyboard.pcMenu);
+        }
+        if ((msg.text.toLowerCase() === 'открыть меню блокнота мыслей 🌍')){
+            await bot.sendMessage(chatId, '📑              Блокнот', keyboard.mindsMenu);
+        }
+        if(numberMindIsWritten && (Number(msg.text)> 0 && Number(msg.text) < 99)){
+            numberMindIsWritten = false;
+            const response = await deleting.deleteMind(Number(msg.text));
+            await bot.sendMessage(chatId, response, keyboard.mainMenuOptions);
+        }
+        else if (msg.text !== 'Открыть меню возможностей 💁🏻' &&
+            msg.text !== 'Закрыть клавиатуру 🤓' &&
+            msg.text !== 'Открыть меню блокнота мыслей 🌍') {
+            await bot.sendMessage(chatId, 'Я тебя услышал, но чет не получилось распознать че ты' +
+                ' хочешь 🤨 😑, поэтому отрою клавиатуру');
+            await bot.sendMessage(chatId, 'Открываю клавиатуру', keyboard.mainMenuOptions);
+        }
+    }
+}
 
 process.on('exit', (code) => {
     console.log(`About to exit with code: ${code}`);
@@ -20,32 +62,11 @@ bot.onText(/\/echo (.+)/, (msg, match) => {
     bot.sendMessage(chatId, resp);
 });
 
-bot.on('callback_query', (query) => {
-    const chatId = query.from.id;
-    bot.sendMessage(chatId, `окей, запускаю ${query.data} 👀`);
-    switch (query.data) {
-        case 'shutdown' :
-            exec('shutdown.exe -s -t 10', function () {
-                console.log('shutdown.exe -s -t 10');
-                exit(-1);
-            });
-            break;
-        case 'reboot' :
-            exec('shutdown.exe -r -t 10', function () {
-                console.log('shutdown.exe -r -t 10');
-                exit(-1);
-            });
-            break;
-        case 'sleepMode' :
-            exec('rundll32 powrprof.dll,SetSuspendState', function () {
-                console.log('rundll32 powrprof.dll,SetSuspendState')
-            });
-            break;
-    }
-});
+bot.on('callback_query', async (query) =>
+    reducerOfBtns(query,bot)
+);
 
 bot.on('message', async (msg) => {
-    const messageID = msg.message_id;
     const chatId = msg.chat.id;
     if(isNewSessionPC){
         isNewSessionPC = false;
@@ -53,64 +74,9 @@ bot.on('message', async (msg) => {
     }
     if (msg.chat.username === 'calmfish') {
         if (msg.text) {
-            if ((msg.text.toLowerCase() === 'пк' ||
-                msg.text.toLowerCase() === 'открыть меню возможностей 💁🏻') && msg.message_id === messageID) {
-                await bot.sendMessage(chatId, 'Что ты хочешь сделать с ПК ?', keybord.pcMenu);
-            }
-            if ((msg.text !== 'Открыть меню возможностей 💁🏻' && msg.text !== 'Закрыть клавиатуру 🤓')) {
-                bot.sendMessage(chatId, 'Я тебя услышал, но чет не получилось распознать че ты' +
-                    ' хочешь 🤨 😑, поэтому отрою клавиатуру');
-                bot.sendMessage(chatId, 'Открываю клавиатуру', keybord.mainMenuOptions)
-            }
+            await switcher(msg,chatId);
         } else {
-            const stream = bot.getFileStream(msg.voice.file_id);
-            let chunks = [];
-            stream.on('data', chunk => chunks.push(chunk));
-            stream.on('end', () => {
-                const axiosConfig = {
-                    method: 'POST',
-                    url: 'https://stt.api.cloud.yandex.net/speech/v1/stt:recognize',
-                    headers: {
-                        Authorization: 'Api-key ' + process.env.YA_API_KEY,
-                    },
-                    data: Buffer.concat(chunks),
-                };
-                axios(axiosConfig).then(async response => {
-                    const command = response.data.result;
-                    const chatId = msg.chat.id;
-                    switch (command.toLowerCase()) {
-                        case 'выключи компьютер' :
-                            await bot.sendMessage(chatId, 'Выключаю компьютер!');
-                            await bot.sendSticker(chatId, 'https://tlgrm.ru/_/stickers/629/439/62943973-f1e5-422a-91ff-0436fd9c9722/19.webp');
-                            exec('shutdown.exe -s -t 00', function () {
-                                console.log('shutdown.exe -s -t 00');
-                                exit(-1);
-                            });
-                            break;
-                        case 'перезагрузи компьютер!' :
-                            await bot.sendMessage(chatId, 'перезагружаю компьютер');
-                            await bot.sendSticker(chatId, 'https://tlgrm.ru/_/stickers/629/439/62943973-f1e5-422a-91ff-0436fd9c9722/8.webp');
-                            exec('shutdown.exe -r -t 10', function () {
-                                console.log('shutdown.exe -s -t 00');
-                                exit(-1);
-                            });
-                            break;
-                        case 'перейди в спящий режим' :
-                            await bot.sendMessage(chatId, 'Перевожу в спящий режим!');
-                            await bot.sendSticker(chatId, 'https://tlgrm.ru/_/stickers/629/439/62943973-f1e5-422a-91ff-0436fd9c9722/21.webp')
-                            exec('rundll32 powrprof.dll,SetSuspendState', function () {
-                                console.log('shutdown.exe -s -t 00')
-                            });
-                            break;
-                        default :
-                            await bot.sendMessage(chatId, 'Не понял');
-                            await bot.sendSticker(chatId, 'https://tlgrm.ru/_/stickers/629/439/62943973-f1e5-422a-91ff-0436fd9c9722/20.webp')
-                            break;
-                    }
-                }).catch((err) => {
-                    console.log("Произошла ошибка при попытка распознавания речи! :", err.response);
-                })
-            });
+            voiceRecognition(msg,bot);
         }
     } else {
         await bot.sendMessage(chatId, `Мой хозяин Денис Рыбкин, а ${msg.from.first_name} ${msg.from.last_name} не будет мной управлять🤬`);
@@ -119,3 +85,6 @@ bot.on('message', async (msg) => {
     }
 });
 bot.on("polling_error", console.log);
+
+module.exports.setMindIsTyping = setMindIsTyping;
+module.exports.setNumberMindIsTyping = setNumberMindIsTyping;
