@@ -1,7 +1,7 @@
-const {collection, getDocs} = require("firebase/firestore");
-const db = require("./index");
+import {collection, getDocs} from "firebase/firestore";
+import {db} from "./index.js";
 
-const fetchMinds = async (needId = false) => {
+export const fetchMinds = async (needId = false) => {
     const resultData = [];
      await getDocs(collection(db, 'Minds')).then(response => {
 
@@ -12,5 +12,3 @@ const fetchMinds = async (needId = false) => {
 
     return resultData;
 }
-
-module.exports = fetchMinds;

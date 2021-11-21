@@ -1,7 +1,7 @@
-var exec = require('child_process').exec;
-const {exit} = require('process');
+import {exec} from 'child_process';
+import {exit} from "process";
 
-module.exports = {
+export const actionsPC = {
     shutdown : () => {
         exec('shutdown.exe -s -t 00', function () {
             console.log('shutdown.exe -s -t 00');

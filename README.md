@@ -1,1 +1,2 @@
-Telegram bot, which can turn off the computer using voice messages and menu buttons. In addition, there is a managed list of managing thought
+**Telegram bot**, which **can turn off the computer using voice messages and menu buttons**.  _In addition, there is a managed list of thought managed list of thought_
+`Bot` : [Bot on Shutdown](@PCChannel_bot) 

@@ -1,4 +1,4 @@
-const keyboards = {
+export const keyboards = {
     pcMenu: {
         reply_markup: {
             inline_keyboard: [
@@ -37,14 +37,31 @@ const keyboards = {
                         text: 'Закрыть клавиатуру 🤓'
                     },
                     {
-                        text: 'Открыть меню возможностей 💁🏻',
+                        text: 'Меню возможностей 💁🏻',
                     }
                 ],
                 [
                     {
-                        text: 'Открыть меню блокнота мыслей 🌍',
+                        text: 'Меню блокнота мотивашек 🌍',
                     }
                 ]
+            ],
+            one_time_keyboard: true,
+        }
+    },
+    confirmation: {
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    {
+                        text: 'Да! 👍🏻',
+                        callback_data: 'confirmMindSave',
+                    },
+                    {
+                        text: 'Нет 🙅🏻',
+                        callback_data: 'unConfirmMindSave',
+                    }
+                ],
             ],
             one_time_keyboard: true,
         }
@@ -54,25 +71,25 @@ const keyboards = {
             inline_keyboard: [
                 [
                     {
-                        text: 'Вывести все мои мысли 📂',
+                        text: 'Вывести все мои мотивашки 📂',
                         callback_data: 'readMinds',
                     }
                 ],
                 [
                     {
-                        text: 'Добавить мысль 🖋',
+                        text: 'Добавить мотивашку 🖋',
                         callback_data: 'addMind',
                     }
                 ],
                 [
                     {
-                        text: 'Удалить мысль ✂️',
+                        text: 'Удалить мотивашку ✂️',
                         callback_data: 'deleteMind',
                     }
                 ],
                 [
                     {
-                        text: 'Удалить все мысли 📛',
+                        text: 'Удалить все мотивашки 📛',
                         callback_data: 'deleteAllMinds',
                     }
                 ],
@@ -140,4 +157,3 @@ const keyboards = {
         }
     }
 }
-module.exports = keyboards;

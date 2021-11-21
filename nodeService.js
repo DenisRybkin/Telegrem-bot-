@@ -1,4 +1,4 @@
-const Service = require('node-windows').Service;
+import {Service} from 'node-windows';
 
 const svc = new Service({
     name : "PC shutdown bot",

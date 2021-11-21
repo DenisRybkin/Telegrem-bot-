@@ -1,4 +1,7 @@
 {
+  "name": "my-app",
+  "version": "1.0.0",
+  "type": "module",
   "dependencies": {
     "axios": "^0.21.1",
     "child_process": "^1.0.2",
